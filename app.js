@@ -430,15 +430,14 @@ function handleCrateClick(e) {
   
   if (revealedCrates.has(idx) || crateEl.classList.contains('disabled')) return;
   
-  // Set transitioning flag to prevent overlapping animations
-  isTransitioning = true;
-  toggleGridInteractivity(false);
-  
   const rect = crateEl.getBoundingClientRect();
   
   // Determine if it was the bomb or a safe box
   if (idx === bombIndex) {
-    // 1. Bomb Clicked
+    // 1. Bomb Clicked - Lock grid and show full-screen zoom animation
+    isTransitioning = true;
+    toggleGridInteractivity(false);
+    
     soundManager.playExplosion();
     document.body.classList.add('screen-shake');
     
@@ -480,7 +479,7 @@ function handleCrateClick(e) {
     }, { once: true });
     
   } else {
-    // 2. Safe Crate Opened
+    // 2. Safe Crate Opened - Instant Local Reveal
     soundManager.playOpenSafe();
     revealedCrates.add(idx);
     
@@ -488,53 +487,29 @@ function handleCrateClick(e) {
     const k = revealedCrates.size;
     highlightSidebarMultiplier(k);
     
-    // Zoom Animation
-    const wrapper = document.getElementById('anim-item-wrapper');
-    wrapper.innerHTML = DIAMOND_SVG;
+    // Reveal diamond immediately in crate with local pop animation
+    crateEl.classList.add('revealed', 'revealed-safe');
+    crateEl.innerHTML = `<div class="crate-inner-item diamond">${DIAMOND_SVG}</div>`;
     
-    wrapper.style.setProperty('--start-x', `${rect.left}px`);
-    wrapper.style.setProperty('--start-y', `${rect.top}px`);
-    wrapper.style.setProperty('--start-w', `${rect.width}px`);
-    wrapper.style.setProperty('--start-h', `${rect.height}px`);
-    wrapper.style.setProperty('--end-x', `${rect.left}px`);
-    wrapper.style.setProperty('--end-y', `${rect.top}px`);
-    wrapper.style.setProperty('--end-w', `${rect.width}px`);
-    wrapper.style.setProperty('--end-h', `${rect.height}px`);
+    spawnFloatingDollar(rect.left + rect.width / 2, rect.top);
     
-    wrapper.className = 'zoom-diamond-anim';
+    // Update HUD
+    updateHUD();
     
-    wrapper.addEventListener('animationend', () => {
-      wrapper.className = '';
-      wrapper.innerHTML = '';
-      
-      crateEl.classList.add('revealed', 'revealed-safe');
-      crateEl.innerHTML = `<div class="crate-inner-item diamond">${DIAMOND_SVG}</div>`;
-      
-      spawnFloatingDollar(rect.left + rect.width / 2, rect.top);
-      
-      isTransitioning = false;
-      
-      // Enable board clicks again
-      toggleGridInteractivity(true);
-      
-      // Update HUD
-      updateHUD();
-      
-      // Enable cash out since safe crate is opened
-      elCashoutBtn.disabled = false;
-      
-      // Check if jackpot reached
-      if (revealedCrates.size === crateCount - 1) {
-        triggerJackpot();
+    // Enable cash out since safe crate is opened
+    elCashoutBtn.disabled = false;
+    
+    // Check if jackpot reached
+    if (revealedCrates.size === crateCount - 1) {
+      triggerJackpot();
+    } else {
+      const m = multipliersData.list[revealedCrates.size - 1];
+      if (revealedCrates.size < multipliersData.B) {
+        elInfoBannerText.innerHTML = `Opened ${revealedCrates.size}/${crateCount}. Current yield: ${m}x (Need ${multipliersData.B} to profit!)`;
       } else {
-        const m = multipliersData.list[revealedCrates.size - 1];
-        if (revealedCrates.size < multipliersData.B) {
-          elInfoBannerText.innerHTML = `Opened ${revealedCrates.size}/${crateCount}. Current yield: ${m}x (Need ${multipliersData.B} to profit!)`;
-        } else {
-          elInfoBannerText.innerHTML = `Opened ${revealedCrates.size}/${crateCount}. Current yield: ${m}x (PROFIT ZONE!)`;
-        }
+        elInfoBannerText.innerHTML = `Opened ${revealedCrates.size}/${crateCount}. Current yield: ${m}x (PROFIT ZONE!)`;
       }
-    }, { once: true });
+    }
   }
 }
 

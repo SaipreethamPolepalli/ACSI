@@ -767,12 +767,30 @@ input[type="range"]::-webkit-slider-thumb:hover {
   height: 100%;
 }
 
+.crate-inner-item.diamond {
+  animation: localPop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
 .crate-inner-item.diamond svg {
   filter: drop-shadow(0 0 6px var(--neon-green));
 }
 
 .crate-inner-item.bomb svg {
   filter: drop-shadow(0 0 6px var(--neon-red));
+}
+
+@keyframes localPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 0;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 1;
+  }
 }
 
 /* Board Unrevealed Bomb Outline (End of Round Reveal) */
