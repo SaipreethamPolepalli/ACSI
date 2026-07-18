@@ -33,6 +33,12 @@ let revealedCrates = new Set(); // Stores indices of clicked crates
 let gameStatus = 'IDLE'; // 'IDLE', 'PLAYING', 'LOST', 'WON'
 let multipliersData = { B: 3, J: 20.0, list: [] };
 
+// Transition state to prevent click overlapping during zoom animations
+let isTransitioning = false;
+
+// Mouse Drag State
+let isMouseDown = false;
+
 // Leaderboard storage
 let leaderboard = [];
 
@@ -160,6 +166,25 @@ function cacheDOM() {
 
 // Setup events
 function setupEventListeners() {
+  // Global mouse handlers for drag-to-select detection
+  document.addEventListener('mousedown', () => {
+    isMouseDown = true;
+  });
+  document.addEventListener('mouseup', () => {
+    isMouseDown = false;
+  });
+
+  // Touch handlers for drag-to-select support on mobile
+  elCrateGrid.addEventListener('touchmove', (e) => {
+    if (gameStatus !== 'PLAYING' || isTransitioning) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el && el.classList.contains('crate') && !el.classList.contains('revealed') && !el.classList.contains('disabled')) {
+      const mockEvent = { currentTarget: el };
+      handleCrateClick(mockEvent);
+    }
+  });
+
   // Slider input
   elCrateSlider.addEventListener('input', (e) => {
     if (gameStatus === 'PLAYING') return;
@@ -283,6 +308,8 @@ function resetBoard() {
   gameStatus = 'IDLE';
   revealedCrates.clear();
   bombIndex = -1;
+  isTransitioning = false;
+  isMouseDown = false;
   
   elCrateGrid.innerHTML = '';
   const cols = getGridColumns(crateCount);
@@ -292,7 +319,18 @@ function resetBoard() {
     const crate = document.createElement('div');
     crate.className = 'crate';
     crate.dataset.index = i;
-    crate.addEventListener('click', handleCrateClick);
+    
+    // Drag-to-select bindings
+    crate.addEventListener('mousedown', (e) => {
+      isMouseDown = true;
+      handleCrateClick(e);
+    });
+    crate.addEventListener('mouseenter', (e) => {
+      if (isMouseDown) {
+        handleCrateClick(e);
+      }
+    });
+    
     elCrateGrid.appendChild(crate);
   }
   
@@ -366,6 +404,7 @@ function startRound() {
   balance -= val;
   currentWager = val;
   gameStatus = 'PLAYING';
+  isTransitioning = false;
   
   // Generate random bomb placement
   bombIndex = Math.floor(Math.random() * crateCount);
@@ -384,17 +423,18 @@ function startRound() {
 // Handle Crate clicks
 function handleCrateClick(e) {
   if (gameStatus !== 'PLAYING') return;
+  if (isTransitioning) return;
+  
   const crateEl = e.currentTarget;
   const idx = parseInt(crateEl.dataset.index);
   
-  if (revealedCrates.has(idx)) return;
+  if (revealedCrates.has(idx) || crateEl.classList.contains('disabled')) return;
   
-  // Disable other user inputs while animation is running
+  // Set transitioning flag to prevent overlapping animations
+  isTransitioning = true;
   toggleGridInteractivity(false);
   
   const rect = crateEl.getBoundingClientRect();
-  const screenW = window.innerWidth;
-  const screenH = window.innerHeight;
   
   // Determine if it was the bomb or a safe box
   if (idx === bombIndex) {
@@ -433,7 +473,10 @@ function handleCrateClick(e) {
       updateHUD();
       
       // Trigger modal after slight delay
-      setTimeout(showLostScreen, 600);
+      setTimeout(() => {
+        isTransitioning = false;
+        showLostScreen();
+      }, 600);
     }, { once: true });
     
   } else {
@@ -468,6 +511,8 @@ function handleCrateClick(e) {
       crateEl.innerHTML = `<div class="crate-inner-item diamond">${DIAMOND_SVG}</div>`;
       
       spawnFloatingDollar(rect.left + rect.width / 2, rect.top);
+      
+      isTransitioning = false;
       
       // Enable board clicks again
       toggleGridInteractivity(true);
@@ -516,18 +561,22 @@ function highlightSidebarMultiplier(step) {
   }
 }
 
-// Reveal all other cards on round finish
+// Reveal all other cards on round finish (including bomb location!)
 function revealRemainingBoard() {
   toggleGridInteractivity(false);
   const crates = document.querySelectorAll('.crate');
   crates.forEach(c => {
     const idx = parseInt(c.dataset.index);
-    if (!revealedCrates.has(idx) && idx !== bombIndex) {
-      c.classList.add('revealed');
-      c.innerHTML = `<div class="crate-inner-item diamond" style="opacity: 0.3">${DIAMOND_SVG}</div>`;
-    } else if (idx === bombIndex && idx !== parseInt(c.dataset.index)) {
+    if (revealedCrates.has(idx)) return; // already solved
+    
+    if (idx === bombIndex) {
+      // Highlight unclicked bomb
       c.classList.add('revealed', 'revealed-unclicked-bomb');
       c.innerHTML = `<div class="crate-inner-item bomb">${BOMB_SVG}</div>`;
+    } else {
+      // Dimmed diamond showing what could have been
+      c.classList.add('revealed');
+      c.innerHTML = `<div class="crate-inner-item diamond" style="opacity: 0.35">${DIAMOND_SVG}</div>`;
     }
   });
 }
@@ -677,10 +726,16 @@ function loadLeaderboard() {
   try {
     const raw = localStorage.getItem('hiddenCratesLeaderboard');
     if (raw) {
-      leaderboard = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        leaderboard = parsed;
+      } else {
+        leaderboard = [];
+      }
     }
   } catch (e) {
     console.error("Failed to load leaderboard from storage", e);
+    leaderboard = [];
   }
 }
 
@@ -715,6 +770,14 @@ function addHighScore(wager, mult, profit) {
 
 function renderLeaderboard() {
   elLeaderboardList.innerHTML = '';
+  
+  // Calculate Peak Multiplier stat of the 3 leaderboard runs
+  const elPeakVal = document.getElementById('leaderboard-peak-val');
+  const peak = leaderboard.length > 0 ? Math.max(...leaderboard.map(s => s.mult)) : 0.0;
+  if (elPeakVal) {
+    elPeakVal.textContent = peak > 0 ? `${peak.toFixed(2)}x` : '0.00x';
+  }
+  
   if (leaderboard.length === 0) {
     elLeaderboardList.innerHTML = `<div class="leaderboard-empty">No high scores registered yet. Double down and cash out!</div>`;
     return;
@@ -726,7 +789,6 @@ function renderLeaderboard() {
     row.innerHTML = `
       <div class="leaderboard-rank">#${index + 1}</div>
       <div class="leaderboard-date">${score.date}</div>
-      <div class="leaderboard-mult">${score.mult.toFixed(2)}x</div>
       <div class="leaderboard-profit">+$${score.profit.toFixed(2)}</div>
     `;
     elLeaderboardList.appendChild(row);
