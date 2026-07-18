@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hidden Crates | Casino-Style High Stakes Gambling Game</title>
+  <meta name="description" content="Welcome to Hidden Crates! Test your luck in this warehouse industrial-themed casino game. Dodge the bomb, unlock diamonds, and chase the 120x Jackpot.">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- Warehouse grid lines -->
+  <div class="warehouse-beams"></div>
+  <div class="hanging-lamp"></div>
+
+  <!-- Caution stripes at the top -->
+  <div class="caution-stripes"></div>
+
+  <!-- Main header -->
+  <header>
+    <div class="logo-container">
+      <svg class="logo-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="9" y1="3" x2="9" y2="21"></line>
+        <line x1="15" y1="3" x2="15" y2="21"></line>
+        <line x1="3" y1="9" x2="21" y2="9"></line>
+        <line x1="3" y1="15" x2="21" y2="15"></line>
+      </svg>
+      <h1>HIDDEN <span>CRATES</span></h1>
+    </div>
+
+    <!-- Stats HUD -->
+    <div class="hud-bar">
+      <div class="hud-panel">
+        <span class="hud-label">Net Worth</span>
+        <span class="hud-value balance-display" id="balance-display">$100.00</span>
+      </div>
+      <div class="hud-panel">
+        <span class="hud-label">Active Wager</span>
+        <span class="hud-value" id="active-bet-display">$0.00</span>
+      </div>
+      <div class="hud-panel">
+        <span class="hud-label">Current Win</span>
+        <span class="hud-value green" id="current-win-display">$0.00</span>
+      </div>
+      <div class="hud-panel">
+        <span class="hud-label">Round Profit/Loss</span>
+        <span class="hud-value" id="net-profit-display">$0.00</span>
+      </div>
+
+      <div class="utility-btns">
+        <button class="icon-btn" id="btn-mute" title="Toggle Sound">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Game Layout -->
+  <main class="game-container">
+    
+    <!-- Left Sidebar: Controls & Multipliers -->
+    <aside class="control-sidebar">
+      
+      <!-- Panel 1: Wager Config -->
+      <section class="sidebar-panel">
+        <h2 class="panel-title">BET MANAGEMENT</h2>
+        
+        <div class="control-group">
+          <label class="control-label" for="crate-slider">
+            Crates Amount: <span id="crate-count-val">10</span>
+          </label>
+          <input type="range" id="crate-slider" min="6" max="16" value="10">
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label" for="wager-amount">Wager Amount ($)</label>
+          <div class="wager-box">
+            <span class="wager-prefix">$</span>
+            <input type="number" id="wager-amount" class="wager-input" value="10.00" min="1.00" step="1.00">
+          </div>
+          
+          <div class="wager-shortcuts">
+            <button class="btn-short" data-action="min">MIN ($1)</button>
+            <button class="btn-short" data-action="half">½</button>
+            <button class="btn-short" data-action="double">2X</button>
+            <button class="btn-short" data-action="max">MAX</button>
+          </div>
+          <div class="wager-shortcuts second-row">
+            <button class="btn-short" data-action="add1">+$1</button>
+            <button class="btn-short" data-action="add5">+$5</button>
+            <button class="btn-short" data-action="add10">+$10</button>
+            <button class="btn-short" data-action="add25">+$25</button>
+          </div>
+        </div>
+
+        <button class="btn-action btn-start" id="btn-start">START ROUND</button>
+        <button class="btn-action btn-cashout" id="btn-cashout" disabled>CASH OUT</button>
+      </section>
+
+      <!-- Panel 2: Multiplier Lists -->
+      <section class="sidebar-panel payouts-panel">
+        <h2 class="panel-title">MULTIPLIERS</h2>
+        <div class="multipliers-list" id="multipliers-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Panel 3: Leaderboard -->
+      <section class="sidebar-panel leaderboard-panel">
+        <h2 class="panel-title">TOP NET WINS</h2>
+        <div class="leaderboard-list" id="leaderboard-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- Game Floor Grid -->
+    <section class="game-board-container">
+      
+      <!-- Target status indicator banner -->
+      <div class="info-banner">
+        <div id="break-even-display">Open <span>3 crates</span> to break even & profit!</div>
+        <div id="info-banner-text" style="color: var(--text-muted); font-size: 0.8rem;">Ready to begin. Set your wager and hit Start!</div>
+      </div>
+
+      <!-- Main crate matrix -->
+      <div class="crate-grid" id="crate-grid">
+        <!-- Dynamically generated crates -->
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Bottom caution stripes -->
+  <div class="caution-stripes bottom"></div>
+
+  <!-- FULL SCREEN ZOOM ANIMATION LAYER -->
+  <div id="full-screen-anim-layer">
+    <div id="anim-item-wrapper"></div>
+  </div>
+
+  <!-- GAME OVER / ROUND SUMMARY MODALS -->
+
+  <!-- 1. Round Lost / Bomb Hit Screen -->
+  <div class="overlay-screen lost-screen" id="lost-screen">
+    <div class="overlay-content">
+      <h2 class="overlay-title">YOU LOST!</h2>
+      <p class="overlay-subtitle">Boom! Hit the warehouse explosive.</p>
+      <div class="overlay-winnings" id="lost-winnings">$0.00</div>
+      
+      <div class="overlay-details">
+        <div class="overlay-detail-item">
+          <span class="overlay-detail-label">Wagered</span>
+          <span class="overlay-detail-val" id="lost-wager">$0.00</span>
+        </div>
+        <div class="overlay-detail-item">
+          <span class="overlay-detail-label">Opened</span>
+          <span class="overlay-detail-val" id="lost-crates">0 crates</span>
+        </div>
+        <div class="overlay-detail-item">
+          <span class="overlay-detail-label">Multiplier</span>
+          <span class="overlay-detail-val" id="lost-mult">0.00x</span>
+        </div>
+      </div>
+      
+      <button class="btn-overlay-close">BACK TO BARN</button>
+    </div>
+  </div>
+
+  <!-- 2. Cashout Success Screen -->
+  <div class="overlay-screen cashout-screen" id="cashout-screen">
+    <div class="overlay-content">
+      <h2 class="overlay-title">CASHED OUT!</h2>
+      <p class="overlay-subtitle">Secure payout credited to balance.</p>
+      <div class="overlay-winnings" id="cash-winnings">+$15.00</div>
+      
+      <div class="overlay-details">
+        <div class="overlay-detail-item">
+          <span class="overlay-detail-label">Wagered</span>
+          <span class="overlay-detail-val" id="cash-wager">$0.00</span>
+        </div>
+        <div class="overlay-detail-item">
+          <span class="overlay-detail-label">Opened</span>
+          <span class="overlay-detail-val" id="cash-crates">0 crates</span>
+        </div>
+        <div class="overlay-detail-item">
+          <span class="overlay-detail-label">Multiplier</span>
+          <span class="overlay-detail-val" id="cash-mult">0.00x</span>
+        </div>
+      </div>
+      
+      <button class="btn-overlay-close">NEXT ROUND</button>
+    </div>
+  </div>
+
+  <!-- 3. Jackpot Celebration Screen -->
+  <div class="overlay-screen jackpot-screen" id="jackpot-screen">
+    <div class="overlay-content">
+      <h2 class="overlay-title">★ JACKPOT! ★</h2>
+      <p class="overlay-subtitle">Incredible! Swept the warehouse board clean.</p>
+      <div class="overlay-winnings" id="jp-winnings">+$1,200.00</div>
+      
+      <div class="overlay-details">
+        <div class="overlay-detail-item">
+          <span class="overlay-detail-label">Wagered</span>
+          <span class="overlay-detail-val" id="jp-wager">$0.00</span>
+        </div>
+        <div class="overlay-detail-item">
+          <span class="overlay-detail-label">Opened</span>
+          <span class="overlay-detail-val" id="jp-crates">0 crates</span>
+        </div>
+        <div class="overlay-detail-item">
+          <span class="overlay-detail-label">Multiplier</span>
+          <span class="overlay-detail-val" id="jp-mult">0.00x</span>
+        </div>
+      </div>
+      
+      <button class="btn-overlay-close">CLAIM WINNINGS</button>
+    </div>
+  </div>
+
+  <!-- 4. Bankrupt Restart Screen -->
+  <div class="overlay-screen restart-screen" id="restart-screen">
+    <div class="overlay-content">
+      <h2 class="overlay-title">BUSTED!</h2>
+      <p class="overlay-subtitle">You ran out of funds. The warehouse takes all.</p>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 25px; line-height: 1.5;">
+        Don't worry, the loading dock boss is throwing you a bone. Get another $100 starting cash and try again!
+      </p>
+      <button class="btn-overlay-close">RECLAIM $100.00</button>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
